@@ -11,7 +11,7 @@
   },
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/bunstation/mcp/main/assets/logo.svg",
+      "src": "https://raw.githubusercontent.com/bunstation/mcp/master/assets/logo.svg",
       "mimeType": "image/svg+xml"
     }
   ],

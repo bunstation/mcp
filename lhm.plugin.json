@@ -1,0 +1,663 @@
+{
+  "identifier": "bunstation",
+  "name": "Bunstation",
+  "version": "1.0.2",
+  "description": "Build websites and apps from a prompt, edit files, publish, and check credits and usage.",
+  "author": "Bunstation",
+  "authorUrl": "https://github.com/bunstation",
+  "homepage": "https://bunstation.com",
+  "cloudEndpoint": "https://api.bunstation.com/mcp",
+  "category": "developer",
+  "icon": "https://raw.githubusercontent.com/bunstation/mcp/master/assets/logo.svg",
+  "tags": [
+    "website-builder",
+    "app-builder",
+    "no-code",
+    "publishing",
+    "vite",
+    "nextjs"
+  ],
+  "tools": [
+    {
+      "name": "projects_create",
+      "description": "Create one Bunstation project from a prompt and start building it. stack is vite or nextjs. model is an OpenRouter model id. Defaults: vite and openai/gpt-5.6-luna. requested_count is how many projects the user asked for in this message. Pass the real number. If it is greater than 3, this tool creates nothing. Do not call this tool when the user asked for more than 3 projects. Tell them the maximum is 3 at a time.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000,
+            "description": "Natural-language description of the website to build."
+          },
+          "requested_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Total number of projects requested in the current user message."
+          },
+          "stack": {
+            "type": "string",
+            "enum": [
+              "vite",
+              "nextjs"
+            ],
+            "description": "Frontend stack to use; defaults to vite."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "OpenRouter model ID used for generation; defaults to openai/gpt-5.6-luna."
+          }
+        },
+        "required": [
+          "prompt",
+          "requested_count"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "templates_list",
+      "description": "List public templates from the Bunstation app library, newest first. Same projects as the templates page. Optional category filters that list, for example restaurant or landing_page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Optional template category slug, such as restaurant or landing_page."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "templates_use",
+      "description": "Copy a public template into a new project owned by the authenticated user. This is the app remix: the template repository is copied, and no prompt build starts. Pass template_id from templates_list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a public template returned by templates_list."
+          }
+        },
+        "required": [
+          "template_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_list",
+      "description": "List the authenticated user's Bunstation projects, newest activity first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_get",
+      "description": "Get one project the authenticated user owns.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_files_list",
+      "description": "List file paths in a project, including uncommitted creates and deletes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_files_read",
+      "description": "Read a text file, including an uncommitted change when one exists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Path of the text file to read."
+          }
+        },
+        "required": [
+          "project_id",
+          "path"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_files_search",
+      "description": "Search text in a project, including uncommitted changes. Uses the live preview when it is running, otherwise the committed repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Literal text to search for in project files."
+          },
+          "case_sensitive": {
+            "type": "boolean",
+            "description": "Whether letter casing must match; defaults to false."
+          },
+          "whole_word": {
+            "type": "boolean",
+            "description": "Whether to match only complete words; defaults to false."
+          },
+          "max_results": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 80,
+            "description": "Maximum number of matches to return; defaults to 40."
+          }
+        },
+        "required": [
+          "project_id",
+          "query"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_files_create",
+      "description": "Stage a new text file. It stays uncommitted until projects_changes_commit. Path is relative to the project root.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Path for the new text file."
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 500000,
+            "description": "Complete UTF-8 text content for the new file."
+          }
+        },
+        "required": [
+          "project_id",
+          "path",
+          "content"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_files_update",
+      "description": "Stage a full replacement of an existing text file. It stays uncommitted until projects_changes_commit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Path of the existing text file to replace."
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 500000,
+            "description": "Complete replacement UTF-8 text content for the file."
+          }
+        },
+        "required": [
+          "project_id",
+          "path",
+          "content"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_files_delete",
+      "description": "Stage deletion of a file. It stays uncommitted until projects_changes_commit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Path of the existing file to stage for deletion."
+          }
+        },
+        "required": [
+          "project_id",
+          "path"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_media_list",
+      "description": "List files in a project's media library, newest first. These are uploaded assets, not source files. mime_type is inferred from the file name. used_bytes is the user's media usage across all projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "One-based page number; defaults to 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page; defaults to 50."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_media_read",
+      "description": "Preview one file from the project media library. Images up to 4 MB are returned as an image the model can see. Text files up to 4 MB include their contents. Larger files return the public URL only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "media_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a media file from projects_media_list."
+          }
+        },
+        "required": [
+          "project_id",
+          "media_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_media_upload",
+      "description": "Prepare an upload into the project media library. This does not accept file bytes. It returns a one-time curl command for POST /projects/:id/media. Run that command in the shell and replace __FILE__ with the local file path. The curl response contains the public URL. Do not base64-encode the file and do not put file contents in this tool. One token allows one request; add more -F media=@path arguments to upload several files together. If the upload fails, call this tool again. The token expires in 10 minutes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_changes_list",
+      "description": "List uncommitted file changes for a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_changes_commit",
+      "description": "Commit every pending file change in a project. Call this after editing files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Optional Git commit message; defaults to Update files."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_changes_discard",
+      "description": "Drop one uncommitted file change and keep the committed file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Path whose staged change should be discarded."
+          }
+        },
+        "required": [
+          "project_id",
+          "path"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_chat_get",
+      "description": "Read the recent conversation for a project, whether generation is running, and any queued follow-ups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_generation_stop",
+      "description": "Stop the generation currently running on a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_builds_list",
+      "description": "List recent builds for a project, newest first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_builds_log",
+      "description": "Read the build log for a commit. Defaults to the latest commit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "commit_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional build commit UUID; when omitted, the latest commit is used."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_update",
+      "description": "Rename a project or change the model used for later messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "New display name for the project."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "New OpenRouter model ID for later project generations."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_publish",
+      "description": "Publish a successful build on a bunstation.app subdomain. Defaults to the latest successful commit and the project id as the subdomain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "commit_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional successful build commit UUID; defaults to the latest successful build."
+          },
+          "subdomain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Optional DNS label for the published site; defaults to the project UUID."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "account_credits_get",
+      "description": "Return the authenticated user's credit balance and current subscription plan.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "account_invoices_list",
+      "description": "List the authenticated user's invoices, newest first. Amounts are in major currency units.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum number of invoices to return; defaults to 20."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "account_invoices_get",
+      "description": "Get one invoice and its hosted Stripe URL. Use the id from account_invoices_list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Invoice UUID returned by account_invoices_list."
+          }
+        },
+        "required": [
+          "invoice_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "account_usage_get",
+      "description": "Return token usage for the authenticated user. date_range is this_week, this_month, or all_time. Defaults to this_month. Includes a total and recent log rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date_range": {
+            "type": "string",
+            "enum": [
+              "this_week",
+              "this_month",
+              "all_time"
+            ],
+            "description": "Usage period to aggregate; defaults to this_month."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "One-based page number for recent usage rows; defaults to 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Maximum usage rows per page; defaults to 20."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ]
+}
