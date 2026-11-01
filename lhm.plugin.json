@@ -4,7 +4,7 @@
   "version": "1.0.2",
   "description": "Build websites and apps from a prompt, edit files, publish, and check credits and usage.",
   "author": "Bunstation",
-  "authorUrl": "https://github.com/bunstation",
+  "authorUrl": "https://bunstation.com",
   "homepage": "https://bunstation.com",
   "cloudEndpoint": "https://api.bunstation.com/mcp",
   "category": "developer",
