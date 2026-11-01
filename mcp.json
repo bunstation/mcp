@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "bunstation": {
+      "url": "https://api.bunstation.com/mcp"
+    }
+  }
+}

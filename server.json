@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.bunstation/bunstation",
+  "title": "Bunstation",
+  "description": "Build websites and apps from a prompt, edit files, publish, and check credits and usage.",
+  "version": "1.0.2",
+  "websiteUrl": "https://bunstation.com",
+  "repository": {
+    "url": "https://github.com/bunstation/mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/bunstation/mcp/main/assets/logo.svg",
+      "mimeType": "image/svg+xml"
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.bunstation.com/mcp"
+    }
+  ]
+}
