@@ -1,6 +1,6 @@
 # Bunstation MCP
 
-Remote MCP server for [Bunstation](https://bunstation.com). It lets an AI agent build websites and apps from a prompt, edit and commit project files, publish builds, and read credits, invoices, and usage for the signed-in account.
+Remote MCP server for [Bunstation](https://bunstation.com). It lets an AI agent build websites and apps from a prompt, edit and commit project files, publish builds, manage Cloud endpoints, crons, and Postgres, and read credits, invoices, and usage for the signed-in account.
 
 - **URL:** `https://api.bunstation.com/mcp`
 - **Transport:** Streamable HTTP (stateless, `POST` only)
@@ -68,6 +68,30 @@ Any client that supports remote Streamable HTTP servers with OAuth works. Client
 | `projects_update` | Rename a project or change the model used for later messages. |
 | `projects_publish` | Publish a successful build on a `bunstation.app` subdomain. |
 | `projects_generation_stop` | Stop the generation running on a project. |
+
+### Cloud
+
+Postgres, Auth, HTTP endpoints, and cron jobs for one project. `database.url`, the service role key, and the JWT secret are secrets and must stay out of public website source. Login and signup use `projectUrl/auth/v1`. Custom HTTP uses `publicHost`.
+
+| Tool | Description |
+| --- | --- |
+| `projects_cloud_get` | Read Cloud status, endpoints, crons, the database, and auth keys. |
+| `projects_cloud_enable` | Turn Cloud on. Creates Postgres and Auth, or starts a stopped backend. |
+| `projects_cloud_stop` | Pause Postgres, endpoints, and crons. Data and code stay in place. |
+| `projects_cloud_endpoint_get` | Read one HTTP endpoint, including its source. |
+| `projects_cloud_endpoint_create` | Create one HTTP route. One method, one path, one Hono handler. |
+| `projects_cloud_endpoint_update` | Change an endpoint's source, path, or method. |
+| `projects_cloud_cron_get` | Read one cron, including its schedule and source. |
+| `projects_cloud_cron_create` | Create a scheduled job. |
+| `projects_cloud_cron_update` | Change a cron's source, schedule, or enabled flag. |
+| `projects_cloud_cron_run` | Invoke one cron once now. |
+| `projects_cloud_database_tables` | List Postgres schemas and tables. |
+| `projects_cloud_database_rows` | Read one page of rows from a table. |
+| `projects_cloud_database_row_insert` | Insert one row. |
+| `projects_cloud_database_row_update` | Update one row by primary key. |
+| `projects_cloud_database_rows_delete` | Delete rows by primary key. |
+| `projects_cloud_database_query` | Run SQL, including schema changes. |
+| `projects_cloud_database_schema_create` | Create a Postgres schema. |
 | `projects_chat_get` | Read the recent conversation, generation status, and queued follow-ups. |
 | `projects_builds_list` | List recent builds, newest first. |
 | `projects_builds_log` | Read the build log for a commit. |
@@ -118,6 +142,7 @@ Edits are staged as uncommitted changes until `projects_changes_commit`. Reads i
 - "List my Bunstation projects and show the build log for the newest one."
 - "Change the hero heading in my portfolio project, commit it, and publish."
 - "How many credits do I have left this month?"
+- "Turn on Cloud for my bakery site and add a POST /orders endpoint."
 
 ## Support
 

@@ -1,8 +1,8 @@
 {
   "identifier": "bunstation",
   "name": "Bunstation",
-  "version": "1.0.2",
-  "description": "Build websites and apps from a prompt, edit files, publish, and check credits and usage.",
+  "version": "1.1.0",
+  "description": "Build websites and apps from a prompt, edit files, publish, manage Cloud endpoints, crons, and Postgres, and check credits and usage.",
   "author": "Bunstation",
   "authorUrl": "https://bunstation.com",
   "homepage": "https://bunstation.com",
@@ -15,7 +15,9 @@
     "no-code",
     "publishing",
     "vite",
-    "nextjs"
+    "nextjs",
+    "cloud",
+    "postgres"
   ],
   "tools": [
     {
@@ -579,6 +581,514 @@
         "required": [
           "project_id"
         ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_get",
+      "description": "Read Bunstation Cloud for a project: Postgres, Auth, HTTP endpoints, and cron jobs. database.url, auth.service_role_key, and auth.jwt_secret are secrets. Do not write them into public website source. Login and signup use projectUrl/auth/v1 with the anon key. Custom HTTP uses publicHost.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_enable",
+      "description": "Turn on Bunstation Cloud for a project. Creates Postgres and Auth when they do not exist, or starts a stopped Cloud backend. Returns the same status as projects_cloud_get, plus created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_stop",
+      "description": "Pause Bunstation Cloud for a project. Postgres, endpoints, and crons stop. Data and code stay in place.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_endpoint_get",
+      "description": "Read one HTTP endpoint, including its TypeScript source. Use the id from projects_cloud_get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Endpoint id from projects_cloud_get."
+          }
+        },
+        "required": ["project_id", "endpoint_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_endpoint_create",
+      "description": "Create one HTTP endpoint: one method, one path, and one Hono route. Do not create login, signup, or /auth routes. Auth already exists at projectUrl/auth/v1. Call this once per route. Platform CORS allows browser fetch from any domain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "HTTP path starting with /, for example /orders or /orders/:id."
+          },
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "DELETE"],
+            "description": "HTTP method. GET, POST, PUT, or DELETE."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Optional DNS label, lowercase, max 32 characters."
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 100000,
+            "description": "TypeScript source exporting a Hono app with exactly one app.get, app.post, app.put, or app.delete."
+          },
+          "starter": {
+            "type": "string",
+            "enum": ["hello", "api", "webhook", "html"],
+            "description": "Starter used when source is omitted. Login and signup are not starters. Auth is projectUrl/auth/v1."
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "maxLength": 8000 },
+            "description": "String map. Do not put these values in public website source."
+          },
+          "dependencies": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "maxLength": 8000 },
+            "description": "npm packages, for example { \"hono\": \"^4.0.0\" }."
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_endpoint_update",
+      "description": "Change an endpoint's source, path, or method. One Hono route only. Do not point it at login, signup, or /auth.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Endpoint id from projects_cloud_get."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "New HTTP path starting with /."
+          },
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "DELETE"],
+            "description": "HTTP method. GET, POST, PUT, or DELETE."
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 100000,
+            "description": "Replacement TypeScript source with exactly one Hono route."
+          }
+        },
+        "required": ["project_id", "endpoint_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_cron_get",
+      "description": "Read one cron job, including its schedule and TypeScript source. Use the id from projects_cloud_get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "cron_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Cron id from projects_cloud_get."
+          }
+        },
+        "required": ["project_id", "cron_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_cron_create",
+      "description": "Create a scheduled job. name is a lowercase DNS label. schedule is a 5-field UTC cron expression, for example */5 * * * *. Source exports default async () => {}. Crons are not called from the website.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+            "description": "Lowercase DNS label, max 32 characters."
+          },
+          "schedule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "5-field UTC cron expression, for example */15 * * * * or @daily."
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 100000,
+            "description": "TypeScript source. export default async () => {}."
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "maxLength": 8000 },
+            "description": "String map. Do not put these values in public website source."
+          },
+          "dependencies": {
+            "type": "object",
+            "additionalProperties": { "type": "string", "maxLength": 8000 },
+            "description": "String map. Do not put these values in public website source."
+          }
+        },
+        "required": ["project_id", "name", "schedule"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_cron_update",
+      "description": "Change a cron's source, schedule, or enabled flag. Pass at least one of those fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "cron_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Cron id from projects_cloud_get."
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 100000,
+            "description": "Replacement TypeScript source."
+          },
+          "schedule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "New 5-field UTC cron expression."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the cron runs on its schedule."
+          }
+        },
+        "required": ["project_id", "cron_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_cron_run",
+      "description": "Invoke one cron once now. This does not change its schedule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "cron_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Cron id from projects_cloud_get."
+          }
+        },
+        "required": ["project_id", "cron_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_tables",
+      "description": "List Postgres schemas and tables for the project's Cloud database. Cloud must be enabled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          }
+        },
+        "required": ["project_id"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_rows",
+      "description": "Read one page of rows from a Cloud Postgres table. schema defaults to public.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "table": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Table name."
+          },
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Postgres schema. Defaults to public."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "One-based page. Defaults to 1."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Rows per page. Defaults to 100."
+          }
+        },
+        "required": ["project_id", "table"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_row_insert",
+      "description": "Insert one row into a Cloud Postgres table. schema defaults to public.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "table": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Table name."
+          },
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Postgres schema. Defaults to public."
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Column values for the new row."
+          }
+        },
+        "required": ["project_id", "table", "values"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_row_update",
+      "description": "Update one Cloud Postgres row. identity is the primary key, for example { \"id\": \"...\" }.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "table": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Table name."
+          },
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Postgres schema. Defaults to public."
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Columns to change."
+          },
+          "identity": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Primary key of the row to update."
+          }
+        },
+        "required": ["project_id", "table", "values", "identity"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_rows_delete",
+      "description": "Delete Cloud Postgres rows by primary key. identities is a list of key objects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "table": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Table name."
+          },
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Postgres schema. Defaults to public."
+          },
+          "identities": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": { "type": "object", "additionalProperties": true },
+            "description": "Primary keys of the rows to delete."
+          }
+        },
+        "required": ["project_id", "table", "identities"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_query",
+      "description": "Run SQL on the project's Cloud Postgres database. Use this for SELECT and for schema changes such as CREATE TABLE. Results are capped by the database API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "sql": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000,
+            "description": "SQL to run on the Cloud Postgres database."
+          }
+        },
+        "required": ["project_id", "sql"],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "projects_cloud_database_schema_create",
+      "description": "Create a Postgres schema in the project's Cloud database.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of a Bunstation project owned by the authenticated user."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63,
+            "description": "Schema name, for example billing."
+          }
+        },
+        "required": ["project_id", "name"],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
